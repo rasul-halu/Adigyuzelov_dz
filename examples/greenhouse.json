@@ -1,0 +1,41 @@
+{
+  "TARGET_TEMP": 24,
+  "NIGHT_TEMP": 20,
+  "ALARM_TEMP": 30,
+  "WATERING_DAYS_MASK": 31,
+  "MORNING_HOUR": 6,
+  "EVENING_HOUR": 18,
+  "WATERING_HOURS": [
+    6,
+    18
+  ],
+  "ZONE_MINUTES": [
+    30,
+    20,
+    10
+  ],
+  "LONGEST_ZONE_MINUTES": 30,
+  "HUMIDITY_SENSORS": [
+    [
+      1,
+      [
+        60,
+        80
+      ]
+    ],
+    [
+      2,
+      [
+        50,
+        70
+      ]
+    ],
+    [
+      3,
+      [
+        40,
+        60
+      ]
+    ]
+  ]
+}
