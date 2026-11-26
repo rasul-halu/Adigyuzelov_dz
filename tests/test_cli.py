@@ -6,7 +6,8 @@ import pathlib
 
 import pytest
 
-from confjson.cli import EXIT_ERROR, EXIT_OK, main, translate
+from confjson.cli import EXIT_ERROR, EXIT_OK, main, read_input, translate
+from confjson.errors import ConfigError
 
 EXAMPLES = pathlib.Path(__file__).resolve().parent.parent / "examples"
 
@@ -66,3 +67,26 @@ def test_examples(name):
     source = (EXAMPLES / f"{name}.conf").read_text(encoding="utf-8")
     expected = (EXAMPLES / f"{name}.json").read_text(encoding="utf-8")
     assert json.loads(translate(source)) == json.loads(expected)
+
+
+def test_bom_is_skipped():
+    """Маркер BOM в начале файла (Блокнот Windows) не мешает разбору."""
+    code, out, _ = run_cli("\ufeff0b1 -> A;", ["--compact"])
+    assert code == EXIT_OK
+    assert out.strip() == '{"A": 1}'
+
+
+def test_stdin_bytes_decoded_as_utf8(monkeypatch):
+    """Стандартный ввод декодируется из UTF-8 независимо от консоли."""
+    data = "\ufeff/* Имя */ 0b10 -> A;".encode("utf-8")
+    fake = io.TextIOWrapper(io.BytesIO(data), encoding="cp1251")
+    monkeypatch.setattr("sys.stdin", fake)
+    assert json.loads(translate(read_input())) == {"A": 2}
+
+
+def test_stdin_not_utf8(monkeypatch):
+    """Ввод не в UTF-8 даёт понятную ошибку."""
+    fake = io.TextIOWrapper(io.BytesIO(b"\xff\xfe"), encoding="cp1251")
+    monkeypatch.setattr("sys.stdin", fake)
+    with pytest.raises(ConfigError, match="не в кодировке UTF-8"):
+        read_input()

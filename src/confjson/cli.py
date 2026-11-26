@@ -9,6 +9,8 @@ from confjson.evaluator import Evaluator
 from confjson.grammar import parse
 
 DEFAULT_INDENT = 2
+INPUT_ENCODING = "utf-8-sig"
+BOM = "\ufeff"
 EXIT_OK = 0
 EXIT_ERROR = 1
 
@@ -20,6 +22,25 @@ def translate(text, indent=DEFAULT_INDENT):
     """
     result = Evaluator().run(parse(text))
     return json.dumps(result, ensure_ascii=False, indent=indent)
+
+
+def read_input(stdin=None):
+    """Читает входной текст конфигурации.
+
+    Стандартный ввод читается как байты и декодируется из UTF-8 (в том
+    числе с маркером BOM), чтобы результат не зависел от кодировки
+    консоли Windows. Переданный текстовый поток читается как есть.
+
+    :raises ConfigError: если байты не являются текстом UTF-8.
+    """
+    if stdin is not None:
+        return stdin.read().lstrip(BOM)
+    try:
+        return sys.stdin.buffer.read().decode(INPUT_ENCODING)
+    except UnicodeDecodeError as exc:
+        raise ConfigError(
+            f"входные данные не в кодировке UTF-8 (байт {exc.start})"
+        ) from None
 
 
 def build_arg_parser():
@@ -47,13 +68,12 @@ def build_arg_parser():
 
 def main(argv=None, stdin=None, stdout=None, stderr=None):
     """Точка входа CLI. Возвращает код завершения процесса."""
-    stdin = stdin or sys.stdin
     stdout = stdout or sys.stdout
     stderr = stderr or sys.stderr
     args = build_arg_parser().parse_args(argv)
     indent = None if args.compact else args.indent
     try:
-        output = translate(stdin.read(), indent)
+        output = translate(read_input(stdin), indent)
     except ConfigError as exc:
         print(exc, file=stderr)
         return EXIT_ERROR
